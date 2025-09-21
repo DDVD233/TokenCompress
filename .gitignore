@@ -163,3 +163,6 @@ output
 debug.py
 wandb/
 wandb
+
+# Conda environment
+Miniconda3-latest-MacOSX-arm64.sh
