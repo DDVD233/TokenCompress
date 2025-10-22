@@ -933,7 +933,7 @@ class Qwen2VLFlashAttention2(Qwen2VLAttention):
                     "for auto-regressive decoding with k/v caching, please make sure to initialize the attention class "
                     "with a layer index."
                 )
-            kv_seq_len += past_key_value.get_usable_length(kv_seq_len, self.layer_idx)
+            kv_seq_len += past_key_value.get_seq_length(self.layer_idx)
 
         # Because the input can be padded, the absolute sequence length depends on the max position id.
         if position_embeddings is None:
@@ -1109,7 +1109,7 @@ class Qwen2VLSdpaAttention(Qwen2VLAttention):
 
         kv_seq_len = key_states.shape[-2]
         if past_key_value is not None:
-            kv_seq_len += past_key_value.get_usable_length(kv_seq_len, self.layer_idx)
+            kv_seq_len += past_key_value.get_seq_length(self.layer_idx)
         if position_embeddings is None:
             logger.warning_once(
                 "The attention layers in this model are transitioning from computing the RoPE embeddings internally "
