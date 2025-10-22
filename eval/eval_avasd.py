@@ -9,10 +9,10 @@ import pandas as pd
 RESIZE_WIDTH, RESIZE_HEIGHT = 360, 640 # TODO picked arbitrarily
 FRAME_COUNT = 150 # TODO picked arbitrarily
 
-df = pd.read_csv("/home/ixzhu/AV-ASD/dataset/csvs/dataset.csv")
+df = pd.read_csv("/scratch/dvdai/AV-ASD/dataset/csvs/dataset.csv")
 behaviors = df.columns[1:-1]
 
-folder_path = '/home/ixzhu/AV-ASD/dataset/clips_video'
+folder_path = '/scratch/dvdai/AV-ASD/dataset/clips_video'
 videos = []
 
 for root, dirs, files in os.walk(folder_path):
@@ -74,4 +74,4 @@ results_df = pd.DataFrame({
     'Output' : results
 })
 
-results_df.to_csv('/home/ixzhu/AV-ASD/dataset/results/vamba.csv')
+results_df.to_csv('vamba.csv')
