@@ -64,7 +64,7 @@ for idx, video in enumerate(videos):
     result = model(test_input)
     results.append(result)
     results_df = pd.DataFrame({
-        'Video_ID': [vid for vid in videos],
+        'Video_ID': videos[:idx+1],
         'Output': results
     })
 
