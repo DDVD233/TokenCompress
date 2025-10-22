@@ -44,6 +44,7 @@ from transformers.modeling_outputs import (
 )
 from transformers.modeling_rope_utils import ROPE_INIT_FUNCTIONS
 from transformers.modeling_utils import PreTrainedModel
+from transformers.generation import GenerationMixin
 from transformers.utils import (
     add_start_docstrings,
     add_start_docstrings_to_model_forward,
@@ -2261,7 +2262,7 @@ QWEN2_VL_INPUTS_DOCSTRING = r"""
 """
 
 # QWen2VL model
-class Qwen2VLForConditionalGeneration(Qwen2VLPreTrainedModel):
+class Qwen2VLForConditionalGeneration(Qwen2VLPreTrainedModel, GenerationMixin):
     _tied_weights_keys = ["lm_head.weight"]
     # for HfMultiTaskTrainer
     supports_report_metrics: bool = True
@@ -2291,6 +2292,10 @@ class Qwen2VLForConditionalGeneration(Qwen2VLPreTrainedModel):
 
     def set_output_embeddings(self, new_embeddings):
         self.lm_head = new_embeddings
+
+    def can_generate(self) -> bool:
+        """Returns True to indicate the model can be used for generation."""
+        return True
 
     def set_decoder(self, decoder):
         self.model = decoder
