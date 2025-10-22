@@ -61,12 +61,7 @@ for idx, video in enumerate(videos):
         }
     ]
 
-    try:
-        result = model(test_input)
-    except Exception as e:
-        print(e)
-        result = 'N/A'
-
+    result = model(test_input)
     results.append(result)
 
 results_df = pd.DataFrame({
