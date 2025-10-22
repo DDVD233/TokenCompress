@@ -125,13 +125,13 @@ def load_logits_and_compute_loss(save_dict, labels, student_logits, device):
     return batch_loss
 
 
-class CrossAttentionCache(Cache):
+class CrossAttentionCache:
     """
+    A simple cache for storing cross-attention key-value pairs.
     `[batch_size, num_heads, seq_len, head_dim]`.
     """
 
     def __init__(self) -> None:
-        super().__init__()
         self.key_cache: List[torch.Tensor] = []
         self.value_cache: List[torch.Tensor] = []
 
