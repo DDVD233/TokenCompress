@@ -33,7 +33,8 @@ except ImportError:
     from typing_extensions import Unpack
 
 from transformers.feature_extraction_utils import BatchFeature
-from transformers.image_utils import ImageInput, VideoInput
+from transformers.image_utils import ImageInput
+from transformers.video_utils import VideoInput
 from transformers.processing_utils import (
     ProcessingKwargs,
     ProcessorMixin,
