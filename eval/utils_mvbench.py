@@ -421,15 +421,12 @@ from torch.utils.data import Dataset
 import os
 import torchvision.transforms as T
 
-import decord
 import json
 
 from torchvision.transforms.functional import InterpolationMode
-from decord import VideoReader, cpu
+import torchvision.io as tvio
 import numpy as np
 from PIL import Image
-
-decord.bridge.set_bridge('torch')
 
 class MVBench_dataset(Dataset):
     def __init__(self, data_dir, data_list, num_segments=8, model_patch_size=16, img_shortest_edge=256, img_longest_edge=980, max_img_seq_len=16500, do_resize=False):
@@ -499,10 +496,10 @@ class MVBench_dataset(Dataset):
         return frame_indices
     
     def read_video(self, video_path, bound=None):
-        vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
-        max_frame = len(vr) - 1
-        fps = float(vr.get_avg_fps())
-        
+        video_frames, audio, info = tvio.read_video(video_path, pts_unit='sec')
+        max_frame = video_frames.shape[0] - 1
+        fps = info['video_fps']
+
         if self.num_segments == 'auto':
             vid = cv2.VideoCapture(video_path)
             height = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -527,7 +524,10 @@ class MVBench_dataset(Dataset):
         frame_indices = self.get_index(bound, fps, max_frame, num_segments, first_idx=0)
         durations = [idx / fps for idx in frame_indices]
         for frame_index in frame_indices:
-            img = Image.fromarray(vr[frame_index].numpy())
+            # Select frame and convert from torch tensor to numpy array
+            frame_tensor = video_frames[frame_index]
+            frame_np = frame_tensor.permute(1, 2, 0).numpy().astype(np.uint8)
+            img = Image.fromarray(frame_np)
             if height and width:
                 img = img.resize((int(width), int(height)), resample=3)
             images_group.append(img)

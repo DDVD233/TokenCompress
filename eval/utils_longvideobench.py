@@ -6,7 +6,8 @@ import json
 import os
 from collections import defaultdict
 from PIL import Image
-from decord import VideoReader, cpu
+import torchvision.io as tvio
+import numpy as np
 from torch.utils.data import Dataset
 
 from train.data import get_resize_output_image_size
@@ -51,7 +52,7 @@ def fps_indices(input_fps: float, total_frames: int, output_fps: float = None, m
     return indices
 
 def load_decord(src_path: str, sample_type: str, **kwargs) -> list[Image.Image]:
-    """Load video using decord, optionally load subtitles
+    """Load video using torchvision, optionally load subtitles
 
     Args:
         src_path (str): video path
@@ -62,8 +63,8 @@ def load_decord(src_path: str, sample_type: str, **kwargs) -> list[Image.Image]:
     Returns:
         list[Image.Image] | tuple[list[Image.Image], str]: frame list, subtitle str (optional)
     """
-    vr = VideoReader(src_path, ctx=cpu(0), num_threads=1)
-    total_frames = len(vr)
+    video_frames, audio, info = tvio.read_video(src_path, pts_unit='sec')
+    total_frames = video_frames.shape[0]
     do_resize = kwargs.pop('do_resize', False)
     if sample_type == 'uniform':
         num_frames = kwargs.pop('num_frames')
@@ -88,18 +89,24 @@ def load_decord(src_path: str, sample_type: str, **kwargs) -> list[Image.Image]:
             img_shortest_edge = kwargs['img_shortest_edge']
             img_longest_edge = kwargs['img_longest_edge']
             height, width = get_resize_output_image_size(height, width, img_shortest_edge, img_longest_edge)
-        input_fps = float(vr.get_avg_fps())
+        input_fps = info['video_fps']
         indices = uniform_indices(num_frames, total_frames)
         durations = [idx / input_fps for idx in indices]
-        frames = vr.get_batch(indices).asnumpy()        # (T, H, W, C), np.uint8
+        # Select frames based on indices
+        selected_frames = video_frames[indices]
+        # Convert from torch tensor to numpy array
+        frames = selected_frames.permute(0, 2, 3, 1).numpy().astype(np.uint8)
         frames = [Image.fromarray(frame).resize((int(width), int(height)), resample=3) if width and height else Image.fromarray(frame) for frame in frames]
     elif sample_type == 'fps':
-        input_fps = float(vr.get_avg_fps())
+        input_fps = info['video_fps']
         output_fps = kwargs.pop('output_fps', None)
         max_num_frames = kwargs.pop('max_num_frames', -1)
         indices = fps_indices(input_fps, total_frames, output_fps, max_num_frames)
         durations = [idx / input_fps for idx in indices]
-        frames = vr.get_batch(indices).asnumpy()        # (T, H, W, C), np.uint8
+        # Select frames based on indices
+        selected_frames = video_frames[indices]
+        # Convert from torch tensor to numpy array
+        frames = selected_frames.permute(0, 2, 3, 1).numpy().astype(np.uint8)
         frames = [Image.fromarray(frame) for frame in frames]
     else:
         raise ValueError(f'Do not support {sample_type} sample type')

@@ -4,7 +4,7 @@ import numpy as np
 import bisect
 import PIL
 from PIL import Image
-from decord import VideoReader
+import torchvision.io as tvio
 import os
 import math
 import random
@@ -461,9 +461,10 @@ class ConversationDataset(torch.utils.data.Dataset):
         new_item = None
         for _ in range(self.num_tries):
             try:
-                video_reader = VideoReader(data_path, num_threads=1)
-                vlen = len(video_reader)
-                fps = video_reader.get_avg_fps()
+                # Read video metadata and frames using torchvision
+                video_frames, audio, info = tvio.read_video(data_path, pts_unit='sec')
+                vlen = video_frames.shape[0]
+                fps = info['video_fps']
                 if self.video_num_frames == 'auto':
                     if not self.do_resize:
                         vid = cv2.VideoCapture(data_path)
@@ -491,7 +492,10 @@ class ConversationDataset(torch.utils.data.Dataset):
                 video_num_frames = min(video_num_frames, vlen)
                 frame_indices = get_frame_indices(video_num_frames, vlen, sample=self.video_sample_type, input_fps=fps)
                 durations = [idx / fps  for idx in frame_indices]
-                frames = video_reader.get_batch(frame_indices).asnumpy()  # (T, H, W, C)
+                # Select frames based on indices
+                selected_frames = video_frames[frame_indices]  # (T, H, W, C)
+                # Convert from torch tensor to numpy array
+                frames = selected_frames.permute(0, 2, 3, 1).numpy().astype(np.uint8)  # (T, H, W, C)
                 results = []
                 for frame in frames:
                     img = PIL.Image.fromarray(frame, mode="RGB")
