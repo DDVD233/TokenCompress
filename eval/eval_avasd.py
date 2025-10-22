@@ -56,6 +56,7 @@ def parse_output(output_str):
     """Parse the model output string to get binary predictions"""
     try:
         output_str = output_str.strip()
+        print(output_str)
         predictions = [int(x.strip()) for x in output_str.split(',')]
         if len(predictions) != 9:
             if len(predictions) < 9:
