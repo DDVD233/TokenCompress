@@ -342,7 +342,12 @@ class Qwen2VLRotaryEmbedding(nn.Module):
 
         # Only pass rope_kwargs if not using default rope type
         if self.rope_type == "default" or not self.rope_kwargs:
-            inv_freq, self.attention_scaling = self.rope_init_fn(self.config, device)
+            if self.config is not None:
+                inv_freq, self.attention_scaling = self.rope_init_fn(self.config, device)
+            else:
+                # When config is None, we need to compute inv_freq manually for default rope
+                inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2, dtype=torch.int64).float() / dim))
+                self.attention_scaling = 1.0
         else:
             inv_freq, self.attention_scaling = self.rope_init_fn(self.config, device, **self.rope_kwargs)
         self.register_buffer("inv_freq", inv_freq, persistent=False)
