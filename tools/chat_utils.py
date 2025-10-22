@@ -1,8 +1,7 @@
-from decord import VideoReader
-import cv2
+import torchvision.io as tvio
 import PIL
-import random
 import torch
+import numpy as np
 
 from train.data import load_image_from_path, get_resize_output_image_size, get_frame_indices
 
@@ -34,30 +33,36 @@ def load_media_data_video(data_path, patch_size, processor, **kwargs):
     do_resize = kwargs.get("do_resize", False)
     model_patch_size = patch_size
 
-    video_reader = VideoReader(data_path, num_threads=1)
-    vlen = len(video_reader)
-    fps = video_reader.get_avg_fps()
+    # Read video metadata and frames using torchvision
+    video_frames, audio, info = tvio.read_video(data_path, pts_unit='sec')
+    vlen = video_frames.shape[0]
+    fps = info['video_fps']
+
     if video_num_frames == 'auto':
         if not do_resize:
-            vid = cv2.VideoCapture(data_path)
-            height = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
-            width = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
-            vid.release()
+            height = video_frames.shape[1]
+            width = video_frames.shape[2]
         else:
             height = processor.image_processor.size['height']
             width = processor.image_processor.size['width']
         num_patches = int((height // model_patch_size) * (width // model_patch_size))
         video_num_frames = int(max_img_seq_len // num_patches)
+
     frame_indices = get_frame_indices(video_num_frames, vlen, sample=video_sample_type, input_fps=fps)
-    frames = video_reader.get_batch(frame_indices).asnumpy()  # (T, H, W, C)
+
+    # Select frames based on indices
+    selected_frames = video_frames[frame_indices]  # (T, H, W, C)
+    # Convert from torch tensor (T, H, W, C) to numpy array
+    frames_numpy = selected_frames.permute(0, 2, 3, 1).numpy().astype(np.uint8)
+
     results = []
-    for frame in frames:
+    for frame in frames_numpy:
         img = PIL.Image.fromarray(frame, mode="RGB")
         if img_shortest_edge is not None and img_longest_edge is not None:
             height, width = get_resize_output_image_size(img.size[1], img.size[0], img_shortest_edge, img_longest_edge)
             img = img.resize((width, height), resample=3)
         results.append(img)
-    
+
     return [results]
 
 def load_media_data_video_kangaroo(data_path, patch_size, processor, **kwargs):
@@ -69,29 +74,34 @@ def load_media_data_video_kangaroo(data_path, patch_size, processor, **kwargs):
     do_resize = kwargs.get("do_resize", False)
     model_patch_size = 14
 
-    video_reader = VideoReader(data_path, num_threads=1)
-    vlen = len(video_reader)
-    fps = video_reader.get_avg_fps()
+    # Read video metadata and frames using torchvision
+    video_frames, audio, info = tvio.read_video(data_path, pts_unit='sec')
+    vlen = video_frames.shape[0]
+    fps = info['video_fps']
+
     if video_num_frames == 'auto':
         if not do_resize:
-            vid = cv2.VideoCapture(data_path)
-            height = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
-            width = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
-            vid.release()
+            height = video_frames.shape[1]
+            width = video_frames.shape[2]
         else:
             height = 448
             width = 448
         num_patches = int((height // model_patch_size) * (width // model_patch_size))
         video_num_frames = int(max_img_seq_len // num_patches)
+
     frame_indices = get_frame_indices(video_num_frames, vlen, sample=video_sample_type, input_fps=fps)
     durations = [idx / fps  for idx in frame_indices]
-    frames = video_reader.get_batch(frame_indices).asnumpy()  # (T, H, W, C)
+
+    # Select frames based on indices
+    selected_frames = video_frames[frame_indices]  # (T, H, W, C)
+    # Convert from torch tensor (T, H, W, C) to numpy array
+    frames_numpy = selected_frames.permute(0, 2, 3, 1).numpy().astype(np.uint8)
     results = []
-    for frame in frames:
+    for frame in frames_numpy:
         img = PIL.Image.fromarray(frame, mode="RGB")
         if img_shortest_edge is not None and img_longest_edge is not None:
             height, width = get_resize_output_image_size(img, img_shortest_edge, img_longest_edge)
             img = img.resize((width, height), resample=3)
         results.append(img)
-    
+
     return ([results], torch.Tensor(durations))
