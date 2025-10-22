@@ -340,7 +340,11 @@ class Qwen2VLRotaryEmbedding(nn.Module):
         self.config = config
         self.rope_init_fn = ROPE_INIT_FUNCTIONS[self.rope_type]
 
-        inv_freq, self.attention_scaling = self.rope_init_fn(self.config, device, **self.rope_kwargs)
+        # Only pass rope_kwargs if not using default rope type
+        if self.rope_type == "default" or not self.rope_kwargs:
+            inv_freq, self.attention_scaling = self.rope_init_fn(self.config, device)
+        else:
+            inv_freq, self.attention_scaling = self.rope_init_fn(self.config, device, **self.rope_kwargs)
         self.register_buffer("inv_freq", inv_freq, persistent=False)
         self.original_inv_freq = self.inv_freq
 
